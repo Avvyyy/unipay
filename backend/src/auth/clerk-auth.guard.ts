@@ -1,26 +1,31 @@
 // src/auth/clerk-auth.guard.ts
-
-import { type ExecutionContext, Injectable } from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
-import { AuthGuard } from '@nestjs/passport';
-import { IS_PUBLIC_KEY } from 'src/decorators/public.decorator';
+import {
+    CanActivate,
+    ExecutionContext,
+    Injectable,
+    UnauthorizedException,
+} from '@nestjs/common';
+import { ClerkAuthService } from './clerk.strategy';
 
 @Injectable()
-export class ClerkAuthGuard extends AuthGuard('clerk') {
-    constructor(private reflector: Reflector) {
-        super();
-    }
+export class ClerkAuthGuard implements CanActivate {
+    constructor(private readonly clerkAuthService: ClerkAuthService) { }
 
-    canActivate(context: ExecutionContext) {
-        const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
-            context.getHandler(),
-            context.getClass(),
-        ]);
+    async canActivate(context: ExecutionContext): Promise<boolean> {
+        const req = context.switchToHttp().getRequest();
 
-        if (isPublic) {
-            return true;
+        const authHeader = req.headers['authorization'];
+
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            throw new UnauthorizedException('Missing or invalid Authorization header');
         }
 
-        return super.canActivate(context);
+        const token = authHeader.split(' ')[1];
+
+        const userId = await this.clerkAuthService.verifyClerkToken(token);
+
+        req.user = { id: userId }; // attach the user info to the request
+        return true;
     }
 }
+  

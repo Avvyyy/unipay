@@ -13,7 +13,7 @@ Unified payment for any purpose
 - create prisma service and export it from prisma module
 - nest new clerk-auth
 - npm add @clerk/backend @nestjs/config @nestjs/passport passport passport-custom
-
+- npm install @clerk/express
 
 
 
